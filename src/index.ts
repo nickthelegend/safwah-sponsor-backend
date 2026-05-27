@@ -49,7 +49,7 @@ app.use(cors({
 app.use(express.json());
 
 const ENOKI_PRIVATE_KEY = process.env.ENOKI_PRIVATE_KEY!;
-const SUI_NETWORK = process.env.SUI_NETWORK ?? 'devnet';
+const SUI_NETWORK = process.env.SUI_NETWORK ?? 'testnet';
 const ENOKI_BASE = 'https://api.enoki.mystenlabs.com/v1';
 
 // Default packages/IDs fallback
