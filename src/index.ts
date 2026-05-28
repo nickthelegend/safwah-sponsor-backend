@@ -53,7 +53,7 @@ const SUI_NETWORK = process.env.SUI_NETWORK ?? 'testnet';
 const ENOKI_BASE = 'https://api.enoki.mystenlabs.com/v1';
 
 // Default packages/IDs fallback
-const SUI_PACKAGE_ID = process.env.SUI_PACKAGE_ID || '0x4d1e423233ca6de0dbcdeabe35f90cdd340ae483942f3dad18e8f600e09d3f3d';
+const SUI_PACKAGE_ID = process.env.SUI_PACKAGE_ID || '0x96604c290f1467bf041b080bf945518d56f597cb6a07d0d698466c44ed0eabfb';
 
 function normalizeSuiAddress(addr: string): string {
   const clean = addr.toLowerCase().replace(/^0x/, '');
