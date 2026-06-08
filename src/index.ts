@@ -5,7 +5,7 @@ import { Transaction } from '@mysten/sui/transactions';
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 
 // In-memory rate limiting middleware
 const rateLimitWindow = 60 * 1000; // 1 minute
@@ -163,7 +163,9 @@ app.post('/sponsor/:digest/submit', async (req: express.Request, res: express.Re
 
 app.get('/health', (_, res: express.Response) => res.json({ status: 'ok', network: SUI_NETWORK, packageId: SUI_PACKAGE_ID }));
 
-const PORT = Number(process.env.PORT ?? 3001);
-app.listen(PORT, () => {
-  console.log(`Safwah sponsor backend running on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = Number(process.env.PORT ?? 3001);
+  app.listen(PORT, () => {
+    console.log(`Safwah sponsor backend running on port ${PORT}`);
+  });
+}
