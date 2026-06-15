@@ -227,9 +227,17 @@ app.post('/sponsor/:digest/submit', async (req: express.Request, res: express.Re
 // Invoices
 app.post('/api/invoices', async (req: express.Request, res: express.Response) => {
   try {
-    const invoice = new InvoiceModel(req.body);
-    await invoice.save();
-    return res.status(201).json(invoice);
+    const { invoiceNumber } = req.body;
+    const existing = await InvoiceModel.findOne({ invoiceNumber });
+    if (existing) {
+      Object.assign(existing, req.body);
+      await existing.save();
+      return res.json(existing);
+    } else {
+      const invoice = new InvoiceModel(req.body);
+      await invoice.save();
+      return res.status(201).json(invoice);
+    }
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
   }
