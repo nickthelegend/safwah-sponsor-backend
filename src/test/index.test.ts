@@ -39,7 +39,7 @@ describe('Sponsor Backend API', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
       status: 'ok',
-      network: 'devnet',
+      network: process.env.SUI_NETWORK || 'devnet',
       packageId: '0x7f49826d888c1f69ff1fb7756af657bfd24c60a3a3046ec48e343a2359ae9c63',
     });
   });
