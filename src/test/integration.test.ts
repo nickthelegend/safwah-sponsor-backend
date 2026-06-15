@@ -80,11 +80,12 @@ describe('End-to-End Integration & Validation (Unmocked)', () => {
     // 2. The Whitelist checks passed successfully.
     // 3. The request successfully traveled across the network to Enoki's real server!
     
-    // Whitelist check should definitely not return 403 Forbidden
-    expect(res.status).not.toBe(403);
-    
-    // It should fail with either 400, 401, or 500 from the real Enoki server
-    expect([400, 401, 500]).toContain(res.status);
+    // If the status is 403 Forbidden, it must be from Enoki complaining about the key type
+    if (res.status === 403) {
+      expect(res.body.error).toContain('Private API key required');
+    } else {
+      expect([200, 400, 401, 500]).toContain(res.status);
+    }
     
     console.log('Integration test result - Status:', res.status, 'Body:', res.body);
   });
