@@ -2,8 +2,69 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Transaction } from '@mysten/sui/transactions';
+import mongoose from 'mongoose';
 
 dotenv.config();
+
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (process.env.NODE_ENV !== 'test' && MONGODB_URI) {
+  mongoose.connect(MONGODB_URI)
+    .then(() => console.log('Connected to MongoDB via mongoose'))
+    .catch((err) => console.error('MongoDB connection error:', err));
+}
+
+// Schemas
+const InvoiceSchema = new mongoose.Schema({
+  invoiceNumber: { type: String, required: true, unique: true },
+  merchantAddress: { type: String, required: true },
+  customerAddress: { type: String, required: true },
+  businessName: { type: String, required: true },
+  amountAED: { type: String, required: true },
+  vatAED: { type: String, required: true },
+  timestamp: { type: Number, default: Date.now },
+  status: { type: String, default: 'Issued' },
+  walrusBlobId: { type: String },
+  walrusUrl: { type: String },
+});
+
+export const InvoiceModel = mongoose.models.Invoice || mongoose.model('Invoice', InvoiceSchema);
+
+const ClaimSchema = new mongoose.Schema({
+  claimObjectId: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  touristAddress: { type: String, required: true },
+  receiptCount: { type: Number, required: true },
+  totalVat: { type: String, required: true },
+  payoutAmount: { type: String, required: true },
+  status: { type: String, required: true },
+  nftMinted: { type: Boolean, default: false },
+  date: { type: String, required: true },
+});
+
+export const ClaimModel = mongoose.models.Claim || mongoose.model('Claim', ClaimSchema);
+
+const FlaggedSchema = new mongoose.Schema({
+  claimObjectId: { type: String, required: true, unique: true },
+  flaggedAt: { type: Date, default: Date.now },
+});
+
+export const FlaggedModel = mongoose.models.Flagged || mongoose.model('Flagged', FlaggedSchema);
+
+const ReceiptSchema = new mongoose.Schema({
+  receiptId: { type: String, required: true, unique: true },
+  touristAddress: { type: String, required: true },
+  storeName: { type: String, required: true },
+  amount: { type: String, required: true },
+  vat: { type: String, required: true },
+  date: { type: String, required: true },
+  walrusUrl: { type: String, required: true },
+  selectedForClaim: { type: Boolean, default: false },
+  claimed: { type: Boolean, default: false },
+});
+
+export const ReceiptModel = mongoose.models.Receipt || mongoose.model('Receipt', ReceiptSchema);
+
 
 export const app = express();
 
@@ -161,7 +222,144 @@ app.post('/sponsor/:digest/submit', async (req: express.Request, res: express.Re
   }
 });
 
+// --- MONGODB REST ENDPOINTS ---
+
+// Invoices
+app.post('/api/invoices', async (req: express.Request, res: express.Response) => {
+  try {
+    const invoice = new InvoiceModel(req.body);
+    await invoice.save();
+    return res.status(201).json(invoice);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/invoices/merchant/:address', async (req: express.Request, res: express.Response) => {
+  try {
+    const list = await InvoiceModel.find({ merchantAddress: req.params.address }).sort({ timestamp: -1 });
+    return res.json(list);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/invoices/tourist/:address', async (req: express.Request, res: express.Response) => {
+  try {
+    const list = await InvoiceModel.find({ customerAddress: req.params.address }).sort({ timestamp: -1 });
+    return res.json(list);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Claims
+app.post('/api/claims', async (req: express.Request, res: express.Response) => {
+  try {
+    const { claimObjectId } = req.body;
+    const existing = await ClaimModel.findOne({ claimObjectId });
+    if (existing) {
+      Object.assign(existing, req.body);
+      await existing.save();
+      return res.json(existing);
+    } else {
+      const claim = new ClaimModel(req.body);
+      await claim.save();
+      return res.status(201).json(claim);
+    }
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/claims/tourist/:address', async (req: express.Request, res: express.Response) => {
+  try {
+    const list = await ClaimModel.find({ touristAddress: req.params.address }).sort({ date: -1 });
+    return res.json(list);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/claims', async (req: express.Request, res: express.Response) => {
+  try {
+    const list = await ClaimModel.find().sort({ date: -1 });
+    return res.json(list);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Flagged Claims
+app.post('/api/flagged', async (req: express.Request, res: express.Response) => {
+  try {
+    const { claimObjectId, flagged } = req.body;
+    if (flagged) {
+      const entry = new FlaggedModel({ claimObjectId });
+      await entry.save();
+      return res.status(201).json(entry);
+    } else {
+      await FlaggedModel.deleteOne({ claimObjectId });
+      return res.json({ status: 'removed' });
+    }
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/flagged', async (req: express.Request, res: express.Response) => {
+  try {
+    const list = await FlaggedModel.find();
+    return res.json(list.map((item: any) => item.claimObjectId));
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Receipts
+app.post('/api/receipts', async (req: express.Request, res: express.Response) => {
+  try {
+    const { receiptId } = req.body;
+    const existing = await ReceiptModel.findOne({ receiptId });
+    if (existing) {
+      Object.assign(existing, req.body);
+      await existing.save();
+      return res.json(existing);
+    } else {
+      const receipt = new ReceiptModel(req.body);
+      await receipt.save();
+      return res.status(201).json(receipt);
+    }
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
+app.get('/api/receipts/tourist/:address', async (req: express.Request, res: express.Response) => {
+  try {
+    const list = await ReceiptModel.find({ touristAddress: req.params.address }).sort({ date: -1 });
+    return res.json(list);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/receipts/claim', async (req: express.Request, res: express.Response) => {
+  try {
+    const { receiptIds } = req.body;
+    await ReceiptModel.updateMany(
+      { receiptId: { $in: receiptIds } },
+      { $set: { claimed: true, selectedForClaim: false } }
+    );
+    return res.json({ status: 'updated' });
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
+  }
+});
+
 app.get('/health', (_, res: express.Response) => res.json({ status: 'ok', network: SUI_NETWORK, packageId: SUI_PACKAGE_ID }));
+
+
 
 if (process.env.NODE_ENV !== 'test') {
   const PORT = Number(process.env.PORT ?? 3001);
