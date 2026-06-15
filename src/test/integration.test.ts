@@ -50,10 +50,10 @@ describe('End-to-End Integration & Validation (Unmocked)', () => {
   });
 
   test('Whitelist Validation and Enoki Transport: processes real Sui Transaction bytes', async () => {
-    // Construct a real Sui Transaction using the real, unmocked SDK
     const tx = new Transaction();
+    const packageId = process.env.SUI_PACKAGE_ID || '0x6130154ae2c83a4d31e6117a1067e636d650bac47d2da57c023571bb4bd9089e';
     tx.moveCall({
-      target: '0x7f49826d888c1f69ff1fb7756af657bfd24c60a3a3046ec48e343a2359ae9c63::safwah::submit_claim',
+      target: `${packageId}::safwah::submit_claim`,
       arguments: [
         tx.pure.string('Integration Test Claim'),
         tx.pure.u32(2)

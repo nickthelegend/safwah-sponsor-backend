@@ -1,6 +1,11 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import { app } from '../index';
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const CURRENT_PACKAGE_ID = process.env.SUI_PACKAGE_ID || '0x6130154ae2c83a4d31e6117a1067e636d650bac47d2da57c023571bb4bd9089e';
 
 // Mock commands to be returned by mock Transaction.fromKind
 let mockCommands: any[] = [];
@@ -40,7 +45,7 @@ describe('Sponsor Backend API', () => {
     expect(res.body).toEqual({
       status: 'ok',
       network: process.env.SUI_NETWORK || 'devnet',
-      packageId: '0x7f49826d888c1f69ff1fb7756af657bfd24c60a3a3046ec48e343a2359ae9c63',
+      packageId: CURRENT_PACKAGE_ID,
     });
   });
 
@@ -78,7 +83,7 @@ describe('Sponsor Backend API', () => {
     mockCommands = [
       {
         MoveCall: {
-          package: '0x7f49826d888c1f69ff1fb7756af657bfd24c60a3a3046ec48e343a2359ae9c63',
+          package: CURRENT_PACKAGE_ID,
           module: 'safwah',
           function: 'forbidden_function', // Forbidden target
         },
@@ -100,7 +105,7 @@ describe('Sponsor Backend API', () => {
     mockCommands = [
       {
         MoveCall: {
-          package: '0x7f49826d888c1f69ff1fb7756af657bfd24c60a3a3046ec48e343a2359ae9c63',
+          package: CURRENT_PACKAGE_ID,
           module: 'safwah',
           function: 'submit_claim', // Whitelisted
         },
